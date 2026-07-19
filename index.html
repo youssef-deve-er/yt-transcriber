@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Transcriber | محول الدروس الذكي</title>
+    
+    <!-- ========================================== -->
+    <!-- 1. كود وتصميم الـ CSS (عبر مكتبة Tailwind) -->
+    <!-- ========================================== -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        .dir-ltr { direction: ltr; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen flex flex-col justify-between">
+
+    <!-- شريط العناوين والتحكم -->
+    <header class="border-b border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-850 shadow-sm">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <h1 id="nav-title" class="text-xl font-bold tracking-wide bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">🎥 AI Transcriber</h1>
+            <div class="flex gap-3">
+                <!-- زر تبديل اللغة -->
+                <button onclick="toggleLang()" id="btn-lang" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-650 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition">English</button>
+                <!-- زر الوضع الداكن/الفاتح -->
+                <button onclick="toggleTheme()" class="p-1.5 rounded-lg border border-gray-300 dark:border-gray-650 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                    <span class="dark:hidden">🌙</span><span class="hidden dark:inline">☀️</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي للموقع -->
+    <main class="flex-grow flex items-center justify-center p-4">
+        <div class="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-750 p-6 md:p-8">
+            
+            <div class="text-center mb-8">
+                <h2 id="main-heading" class="text-2xl md:text-3xl font-bold mb-2">تحويل دروس يوتيوب إلى نصوص</h2>
+                <p id="main-sub" class="text-gray-550 dark:text-gray-400 text-sm md:text-base">ضع الرابط أدناه واستخرج ملف الوورد الخاص بك بدقة عالية وذكاء اصطناعي احترافي</p>
+            </div>
+
+            <!-- خيارات الإدخال -->
+            <div class="space-y-4">
+                <div>
+                    <label id="lbl-url" class="block text-sm font-semibold mb-2">رابط فيديو يوتيوب:</label>
+                    <input type="url" id="video-url" placeholder="https://youtu.be/..." class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-650 bg-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none text-left dir-ltr">
+                </div>
+
+                <div>
+                    <label id="lbl-model" class="block text-sm font-semibold mb-2">دقة النموذج (الذكاء الاصطناعي):</label>
+                    <select id="model-size" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-650 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="base">Base (سريع جداً - دقة عادية)</option>
+                        <option value="small">Small (متوازن)</option>
+                        <option value="medium" selected>Medium (دقة عالية - موصى به للعربية)</option>
+                    </select>
+                </div>
+
+                <button onclick="startTranscription()" id="btn-submit" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl shadow-lg flex justify-center items-center gap-2">
+                    <span>🚀 ابدأ استخراج النص الآن</span>
+                </button>
+            </div>
+
+            <!-- شاشة التحويل (تظهر عند المعالجة) -->
+            <div id="loading-area" class="hidden mt-8 border-t border-gray-100 dark:border-gray-700 pt-6 text-center space-y-3">
+                <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                <p id="loading-txt" class="text-sm font-medium animate-pulse">جاري معالجة الفيديو واستخراج النص، يرجى عدم إغلاق الصفحة...</p>
+            </div>
+
+            <!-- شاشة النتيجة (تظهر بعد الانتهاء) -->
+            <div id="result-area" class="hidden mt-8 border-t border-gray-100 dark:border-gray-700 pt-6 space-y-4">
+                <div class="p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-xl text-green-600 dark:text-green-400 font-semibold text-center" id="success-msg">
+                    🎉 اكتمل التحويل بنجاح تام!
+                </div>
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-850">
+                    <h4 id="lbl-preview" class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">معاينة النص المستخرج:</h4>
+                    <p id="text-preview" class="text-sm leading-relaxed text-gray-600 dark:text-gray-300 italic"></p>
+                </div>
+                <a id="btn-download" href="#" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md flex justify-center items-center gap-2 text-center">
+                    📥 تحميل ملف الوورد (.docx)
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center p-4 text-xs text-gray-400 border-t border-gray-100 dark:border-gray-850">
+        &copy; 2026 AI Transcriber Platform
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- 2. كود الـ JavaScript (التحكم والتفاعل واللغات) -->
+    <!-- ========================================== -->
+    <script>
+        let currentLang = 'ar';
+        // 💡 ملاحظة: عند رفع السيرفر على منصة مثل Render، استبدل الرابط أدناه برابط السيرفر الجديد
+        const BACKEND_URL = "http://localhost:5000"; 
+
+        const translations = {
+            ar: {
+                title: "تحويل دروس يوتيوب إلى نصوص",
+                sub: "ضع الرابط أدناه واستخرج ملف الوورد الخاص بك بدقة عالية وذكاء اصطناعي احترافي",
+                lblUrl: "رابط فيديو يوتيوب:",
+                lblModel: "دقة النموذج (الذكاء الاصطناعي):",
+                btnSubmit: "🚀 ابدأ استخراج النص الآن",
+                loading: "جاري معالجة الفيديو واستخراج النص، يرجى عدم إغلاق الصفحة...",
+                success: "🎉 اكتمل التحويل بنجاح تام!",
+                preview: "معاينة النص المستخرج:",
+                download: "📥 تحميل ملف الوورد (.docx)",
+                langBtn: "English"
+            },
+            en: {
+                title: "Transcribe YouTube Lessons",
+                sub: "Paste the link below to extract your Word file using high-accuracy professional AI",
+                lblUrl: "YouTube Video URL:",
+                lblModel: "AI Model Accuracy:",
+                btnSubmit: "🚀 Start Transcription Now",
+                loading: "Processing video and extracting text, please do not close this page...",
+                success: "🎉 Transcription completed successfully!",
+                preview: "Extracted Text Preview:",
+                download: "📥 Download Word File (.docx)",
+                langBtn: "العربية"
+            }
+        };
+
+        function toggleTheme() { 
+            document.documentElement.classList.toggle('dark'); 
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            const lang = translations[currentLang];
+            
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+
+            document.getElementById('main-heading').innerText = lang.title;
+            document.getElementById('main-sub').innerText = lang.sub;
+            document.getElementById('lbl-url').innerText = lang.lblUrl;
+            document.getElementById('lbl-model').innerText = lang.lblModel;
+            document.getElementById('btn-submit').innerText = lang.btnSubmit;
+            document.getElementById('loading-txt').innerText = lang.loading;
+            document.getElementById('success-msg').innerText = lang.success;
+            document.getElementById('lbl-preview').innerText = lang.preview;
+            document.getElementById('btn-download').innerText = lang.download;
+            document.getElementById('btn-lang').innerText = lang.langBtn;
+
+            const select = document.getElementById('model-size');
+            if(currentLang === 'en') {
+                select.options[0].text = "Base (Very Fast)";
+                select.options[1].text = "Small (Balanced)";
+                select.options[2].text = "Medium (High Accuracy)";
+            } else {
+                select.options[0].text = "Base (سريع جداً)";
+                select.options[1].text = "Small (متوازن)";
+                select.options[2].text = "Medium (دقة عالية)";
+            }
+        }
+
+        function startTranscription() {
+            const url = document.getElementById('video-url').value.trim();
+            const model = document.getElementById('model-size').value;
+
+            if(!url) {
+                alert(currentLang === 'ar' ? 'الرجاء إدخال الرابط أولاً!' : 'Please enter a URL first!');
+                return;
+            }
+
+            document.getElementById('loading-area').classList.remove('hidden');
+            document.getElementById('result-area').classList.add('hidden');
+
+            fetch(`${BACKEND_URL}/process`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url, model: model })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading-area').classList.add('hidden');
+                if(data.success) {
+                    document.getElementById('text-preview').innerText = data.preview;
+                    document.getElementById('btn-download').href = `${BACKEND_URL}/download/${data.file_id}`;
+                    document.getElementById('result-area').classList.remove('hidden');
+                } else {
+                    alert(currentLang === 'ar' ? data.error_ar : data.error_en);
+                }
+            })
+            .catch(err => {
+                document.getElementById('loading-area').classList.add('hidden');
+                alert('Error connecting to AI Server / فشل الاتصال بسيرفر الذكاء الاصطناعي');
+            });
+        }
+    </script>
+</body>
+</html>
